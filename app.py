@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#pip install -r requirements.txt#!/usr/bin/env python3
 """
 Provenance Guard — the web service.
 
@@ -30,6 +30,7 @@ from flask import Flask, jsonify, request
 
 import audit
 import config
+import detector
 
 app = Flask(__name__)
 
@@ -153,6 +154,8 @@ def health():
 @app.post("/submit")
 # @limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
 def submit():
+   
+
     """
     Take a piece of text, decide about it, log the decision, answer.
     ← TODO — Milestones 3, 4 and 5
@@ -200,16 +203,48 @@ def submit():
     a malformed input is one of the most common real failures there is.
     """
     payload = request.get_json(silent=True) or {}
+    text = payload.get("text")
+    creator_id = payload.get("creator_id")
 
-    # TODO: delete this and build the route.
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({
+            "error": "text_too_short",
+            "message": "Please provide non-empty text."
+        }), 400
+    
+    model_score = detector.model_signal(text)
+    content_id = str(uuid.uuid4())
+
+
+    audit.log_decision(
+        content_id=content_id,
+        creator_id=creator_id,
+        guess="unsure",
+        model_score=model_score,
+        style_score=None,
+        combined_score=None,
+        label="This submission needs further review.",
+        status="decided"
+    )
+
+
+
+
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /submit isn't built yet — see the TODO in app.py.",
-        "you_sent": {
-            "text_length": len(payload.get("text", "")),
-            "creator_id": payload.get("creator_id"),
-        },
-    }), 501
+        "content_id": content_id,
+        "guess": "unsure",
+        "confidence": 0.0,
+        "label": "This submission needs further review.",
+        "model_score": model_score,
+        "style_score": 0.0,
+        "creator_id": creator_id,
+        "text_length": len(text),
+    }), 200
+
+
+
+
+    
 
 
 @app.post("/appeal")
