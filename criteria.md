@@ -44,12 +44,17 @@ Two things worth knowing before you pick numbers:
 ---
 ## 1.
 
+1 out of 10 
+human-written samples should receive a high-confidence AI-generated label
+
 <!-- Your criterion. It must name a number. -->
 
 
 
 **Why this target:**
 
+Because a false accusation can have a very negative impact on a writer's reputation and it might push writers to avoid using the program all together.
+This program should prioritize protecting writers from false accusations. 
 
 
 ---
@@ -57,11 +62,13 @@ Two things worth knowing before you pick numbers:
 ## 2.
 
 <!-- Your criterion. -->
+Average score for AI - generated writing should be 0.20 higher than he average score or human written samples in 3 trials
 
 
 
 **Why this target:**
 
+0.20 would be ideal for the program to be able to truly distinguish between Human written and AI - generated
 
 
 ---
@@ -70,21 +77,27 @@ Two things worth knowing before you pick numbers:
 
 <!-- Your criterion. -->
 
+all three labels should appear at least once in each trial.
+
 
 
 **Why this target:**
 
-
+I think it would be ideal to have the program produce a label from the three, instead of always producing the same label
 
 ---
 
 ## 4.
+
+100 % of valid appeals should be recorded in the audit log and marked under_review across all 3 trials.
 
 <!-- Your criterion. -->
 
 
 
 **Why this target:**
+
+This helps prioritize protecting writers. We need to be able to review something that our program might have gotten wrong.
 
 
 
@@ -93,11 +106,11 @@ Two things worth knowing before you pick numbers:
 ## 5.
 
 <!-- Your criterion. -->
-
+100% of invalid submissions should receive an error response
 
 
 **Why this target:**
-
+It is important that the program does not crash, an error message would be an appropiate way of letting the user understand what went wrong.
 
 
 ---
