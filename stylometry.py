@@ -64,8 +64,25 @@ def sentence_length_spread(text: str) -> float:
     `stdev` raises on fewer than two values. Decide what that should return
     before the attack set decides for you.
     """
-    # TODO: replace this
-    return 0.0
+    # TODO: 
+
+    
+    sentence_list = sentences(text)
+
+    lengths = [len(words(sentence)) for sentence in sentence_list]
+
+    if len(lengths) < 2:
+        return 0.0
+
+    average = statistics.mean(lengths)
+
+    if average == 0:
+        return 0.0
+
+    spread = statistics.stdev(lengths)
+
+    return spread / average
+
 
 
 def type_token_ratio(text: str) -> float:
@@ -81,8 +98,14 @@ def type_token_ratio(text: str) -> float:
     that alone can look like a signal.
     """
     # TODO: replace this
-    return 0.0
+    word_list = words(text)
 
+    if not word_list:
+        return 0.0
+
+    unique_words = set(word_list)
+
+    return len(unique_words) / len(word_list)
 
 def punctuation_density(text: str) -> float:
     """
@@ -95,7 +118,18 @@ def punctuation_density(text: str) -> float:
         writers.
     """
     # TODO: replace this
-    return 0.0
+    
+    if not text:
+        return 0.0
+
+    punctuation_marks = ".,!?;:-—"
+
+    punctuation_count = sum(
+        1 for char in text if char in punctuation_marks
+    )
+
+    return punctuation_count / len(text)
+
 
 
 # ── Combining them ───────────────────────────────────────────────────────────
@@ -123,7 +157,29 @@ def style_signal(text: str) -> float:
     to signal one, and it is plain writing that gets accused.
     """
     # TODO: replace this
-    return 0.5
+    
+    spread = sentence_length_spread(text)
+    vocabulary = type_token_ratio(text)
+    punctuation = punctuation_density(text)
+
+    # Lower sentence variation gives a higher AI-like score
+    spread_score = 1.0 - min(spread, 1.0)
+
+    # Lower vocabulary variety gives a higher AI-like score
+    vocabulary_score = 1.0 - vocabulary
+
+    # Normalize punctuation using a provisional 10% reference
+    punctuation_score = 1.0 - min(punctuation / 0.10, 1.0)
+
+    # Give all three measurements equal weight
+    combined = (
+        spread_score +
+        vocabulary_score +
+        punctuation_score
+    ) / 3
+
+    return max(0.0, min(combined, 1.0))
+
 
 
 if __name__ == "__main__":

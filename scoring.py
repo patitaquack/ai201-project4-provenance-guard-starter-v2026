@@ -53,10 +53,12 @@ def combine_signals(model_score: float, style_score: float) -> float:
     write a different rule.
     """
     # TODO: replace this
-    return (
+    combined = (
         config.WEIGHT_MODEL_SIGNAL * model_score
         + config.WEIGHT_STYLE_SIGNAL * style_score
     )
+
+    return max(0.0, min(combined, 1.0))
 
 
 def score_to_label(score: float) -> tuple[str, str]:
@@ -86,14 +88,34 @@ def score_to_label(score: float) -> tuple[str, str]:
     milestone.
     """
     # TODO: replace this — thresholds are in config.py
-    if score >= config.AI_THRESHOLD:
-        return "ai", "PLACEHOLDER — write the high-confidence AI label."
-    if score <= config.HUMAN_THRESHOLD:
-        return "human", "PLACEHOLDER — write the high-confidence human label."
-    return "unsure", "PLACEHOLDER — write the unsure label."
+    
 
 
 def label_ranges() -> list[tuple[str, str]]:
+
+    pass
+
+
+def score_to_label(score: float) -> tuple[str, str]:
+
+    if score >= config.AI_THRESHOLD:
+        return (
+            "ai",
+            "This writing shows patterns associated with AI-generated text, but this result is not proof of AI use. You can appeal this decision."
+        )
+
+    if score <= config.HUMAN_THRESHOLD:
+        return (
+            "human",
+            "This writing appears more consistent with human-written text."
+        )
+
+    return (
+        "unsure",
+        "We cannot confidently determine whether this writing was AI-generated or human-written. You can appeal this result."
+    )
+
+
     """
     The score range each label covers. Your README needs these beside the
     label text — given to you so the numbers can't drift apart from config.py.
@@ -102,4 +124,4 @@ def label_ranges() -> list[tuple[str, str]]:
         ("high-confidence human", f"0.00 – {config.HUMAN_THRESHOLD:.2f}"),
         ("unsure", f"{config.HUMAN_THRESHOLD:.2f} – {config.AI_THRESHOLD:.2f}"),
         ("high-confidence AI", f"{config.AI_THRESHOLD:.2f} – 1.00"),
-    ]
+]
