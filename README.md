@@ -39,6 +39,24 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
+Provenance Guard is a Flask web service that examins writing and estimates wether it was AI- generated text or Human written. It has two detection signals and it allows writers to appeal a decision.
+
+- The user submits their writing along with a creator ID through   the /submit endpoint.
+
+- The application checks that the text is valid and makes sure it is not empty or too long.
+
+- The GPT-2 model analyzes the text to see how predictable the writing is and gives it a score between 0 and 1.
+
+- The stylometry function looks at things like sentence lengths, word variety and punctuation to calculate another score.
+
+- Both scores are combined into one final score. I decided to give each method an equal weight of 50%.
+
+- Based on  final score the application labels the writing as human, unsure, or AI. It also saves the results in an audit log and gives the submission a unique content ID.
+
+- If someone disagrees with the result they can submit an appeal using their content ID. The appeal is saved in the audit log with an under_review status.
+
+The application is meant to identify patterns in writing, but the results are not proof that someone used AI.
+
 
 
 ---
@@ -55,17 +73,27 @@
 
 **What it measures:**
 
+looks at how predictable the writing is and give s it a score between 0  - 1. A higher score means the text has more patterns associated with AI- generated writing.
+
 **Why that might differ between human and AI writing:**
+
+AI- genreated writing can be a lot more predicatable due to language models using common words and sentence patterns. Human writing may be less predictable because people have difference writing styles and all use different choice of words in their writing.
 
 **What it can't see:**
 
+It can not know who wrote the text. Someone who writes simples or repeatitive sentences may receive a high AI score even when they wrote everything themselves. It can halso have trouble recognizinv AI generated writing that has been edited.
 ### Signal two — the style signal
 
 **What it measures:**
 
+It looks at how a text is written and measures differences in lenghts (in sentences), how many unique words were used, and how often punctuation appears.
+
 **Why that might differ between human and AI writing:**
+Humans tend to use a variation of lengths in their sentences,and different vocabulary, and punctuation. AI generated writing can sometimes follow more consistent patterns.
 
 **What it can't see:**
+
+Who wrote the text. A human might write short and repeatitive sentences, while AI will generate writing in difference sentence lengths and vocanulary. 
 
 ### The combining rule
 
@@ -74,15 +102,24 @@
 
 **The rule:**
 
+I  decided to give both the GPT-2 model and stylometry an equal weight because both have their limitations. I didn't want to depend on just one method to decide whether someone used AI. By combining both scores, the application can give an unsure result when the scores are different instead of assuming the writing was AI-generated.
+
 **The numbers:**
+- GPT-2 model: 50% (0.50)
+- Stylometry: 50% (0.50)
+- Human threshold: 0.30
+- AI threshold: 0.80
 
 **Where it lives:** `scoring.py::combine_signals`
+
 
 <!-- ⚠️ The grader checks your code against that line. If your rule lives
      somewhere else, say where. -->
 
 **A case where my two signals split, and what my rule does with it:**
 
+When I tested a paragraph about a garden GPT-2 gave it a score of 0.6724 but stylometry gave it 0.3314. This showed me that both methods can look at the same writing and give different results.
+When I combined the scores, I got 0.5019. Since that falls between my thresholds the application returned "unsure." I think this is a lot better than automatically labeling someone's writing as AI when the two methods don't agree.
 
 
 ---
@@ -96,14 +133,16 @@
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human |0.00 - 0.30| This writing appears more consistent with human-written text.|
+| unsure |  + 0.30, and under 0.80 | We cannot confidently determine whether this writing was AI-generated or human-written. You can appeal this result. |
+| high-confidence AI |0.80 - 1.00 | This writing shows patterns associated with AI-generated text, but this result is not proof of AI use. You can appeal this decision.|
 
 **Why I worded the "unsure" one this way:**
 <!-- It's the hardest of the three. It has to admit uncertainty without
      sounding like an accusation, because the person reading it may well have
      written every word themselves. -->
+
+I wanted to ensure that when the user reads an unsure message, they dont feel like they are being accused of using AI. Honesty is necessary but my priority is to protect the writer, and give them a chance to appeal if they disagree.
 
 
 
@@ -121,37 +160,81 @@
      two off the response, so leaving them out costs you next unit's
      diagnostics. -->
 
-```bash
-$ curl -X POST http://127.0.0.1:5000/submit \
+
+
+curl -X POST http://127.0.0.1:5001/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
-```
+  -d '{"text": "The garden was quiet. Birds sang softly in the trees. Suddenly, a strong wind swept through the courtyard, scattering leaves across the path and sending everyone running toward the house.", "creator_id": "writer123"}'
 
-```json
 
-```
+{
+  "combined_score": 0.5018956442468022,
+  "confidence": 0.003791288493604439,
+  "content_id": "17eb24c4-3cf2-4764-a8b4-c2f99b0d7ae7",
+  "creator_id": "writer123",
+  "guess": "unsure",
+  "label": "We cannot confidently determine whether this writing was AI-generated or human-written. You can appeal this result.",
+  "model_score": 0.6724,
+  "style_score": 0.3313912884936045,
+  "text_length": 187
+}
+
+
+
+
 
 **An appeal**
 
-```bash
-$ curl -X POST http://127.0.0.1:5000/appeal \
+
+curl -X POST http://127.0.0.1:5001/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
-```
+  -d '{
+    "content_id": "17eb24c4-3cf2-4764-a8b4-c2f99b0d7ae7",
+    "reasoning": "I wrote this paragraph myself and would like the decision reviewed."
+  }'
 
-```json
+  {
+  "content_id": "17eb24c4-3cf2-4764-a8b4-c2f99b0d7ae7",
+  "message": "Your appeal has been received and is under review.",
+  "status": "under_review"
+}
 
-```
+
+
 
 **What the log shows afterwards**
 
-```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
-```
+curl "http://127.0.0.1:5001/log?limit=2"
 
-```json
 
-```
+{
+  "count": 2,
+  "entries": [
+    {
+      "combined_score": 0.5018956442468022,
+      "content_id": "17eb24c4-3cf2-4764-a8b4-c2f99b0d7ae7",
+      "creator_id": "writer123",
+      "guess": "unsure",
+      "label": "We cannot confidently determine whether this writing was AI-generated or human-written. You can appeal this result.",
+      "model_score": 0.6724,
+      "status": "decided",
+      "style_score": 0.3313912884936045,
+      "timestamp": "2026-11-16T04:21:40+00:00"
+    },
+    {
+      "content_id": "17eb24c4-3cf2-4764-a8b4-c2f99b0d7ae7",
+      "creator_id": "writer123",
+      "event": "appeal",
+      "reasoning": "I wrote this paragraph myself and would like the decision reviewed.",
+      "status": "under_review",
+      "timestamp": "2026-11-16T04:37:53+00:00"
+    }
+  ]
+}
+
+
+
+
 
 ---
 
@@ -160,14 +243,21 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
 **Moment 1**
 
 - *What I asked for:*
+I asked GPT how I can combine the GPT-2 model score and the stylometry score
 - *What came back:*
+It explained how weighted averages work and showed me how giving each score 50% would affect the result
 - *What I changed:*
+I kept the weights equal and updated the file with combine both scores, and I tested the function to make sure it returned the correct number
 
 **Moment 2**
 
 - *What I asked for:*
+To help me understand an error when dealing with Flask server
 - *What came back:*
+It explained that the port I was using was already being used and showed me how to stop and existing process and use a different port
 - *What I changed:*
+I checked what was using the port and stopped the old processes and changed my server to run a different port.
+
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
