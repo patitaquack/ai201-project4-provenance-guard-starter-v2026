@@ -265,7 +265,8 @@ I checked what was using the port and stopped the old processes and changed my s
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 10 per minute, 200 per day
+
 
 **Why those numbers and not others:**
 <!-- Think about two people: a real writer submitting their own work a few
@@ -273,17 +274,34 @@ I checked what was using the port and stopped the old processes and changed my s
      thresholds. Your numbers have to be liveable for the first and hostile to
      the second. -->
 
+     I chose these limits because I want users to be ableto sumbit their work without constantly getting rejected. I also do not want hundres of requests to overload the server. 10 request is a reasonable number for a user that uses the program regularly.
+
 **What a caller counts as:** <!-- per address, or per creator_id? They fail
 differently — one script can look like a thousand callers, and one household
 can look like one. -->
+
+The program uses the creator_id to identify the caller, but when there is no valid createor_id it uses the caller IP address. So, multiple requests using the same creator ID count towards the same limit.
 
 **The run of status codes when I pushed past it:**
 
 <!-- python run_attacks.py --flood 15 -->
 
-```
+200
+200
+200
+200
+200
+200
+200
+200
+200
+200
+429
+429
+429
+429
+429
 
-```
 
 ---
 

@@ -154,7 +154,7 @@ def health():
 # ── YOU BUILD THIS ────────────────────────────────────────────────────────────
 
 @app.post("/submit")
-# @limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
+@limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
 def submit():
    
 
@@ -206,27 +206,51 @@ def submit():
     """
     payload = request.get_json(silent=True)
 
+
     if not isinstance(payload, dict):
+        audit.log_rejection(
+            creator_id="unknown",
+            reason="invalid_request"
+        )
+
         return jsonify({
-        "error": "invalid_request",
-        "message": "Please provide a JSON object."
+            "error": "invalid_request",
+            "message": "Please provide a JSON object."
         }), 400
+
+
+
     
     text = payload.get("text")
     creator_id = payload.get("creator_id")
+
     
 
+   
     if not isinstance(text, str) or not text.strip():
+        audit.log_rejection(
+            creator_id=creator_id,
+            reason="text_too_short"
+        )
+
         return jsonify({
             "error": "text_too_short",
             "message": "Please provide non-empty text."
         }), 400
 
+
+    
     if len(text) > 10000:
+        audit.log_rejection(
+            creator_id=creator_id,
+            reason="text_too_long"
+        )
+
         return jsonify({
             "error": "text_too_long",
             "message": "Text must not exceed 10,000 characters."
         }), 413
+
     
     model_score = detector.model_signal(text)
     content_id = str(uuid.uuid4())
@@ -252,6 +276,7 @@ def submit():
         label=label,
         status="decided"
     )
+
 
 
 
